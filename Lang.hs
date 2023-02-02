@@ -135,13 +135,18 @@ instl (cl, alpha_hat, cr) t@(TVar tau) | wf cr t = return $ Context (uncontext c
 instl (cl, alpha_hat, cr) b@(TExVar beta_hat) = let (cll, beta, clr) = fromJust (hole cl (HasExistentialUnsolved beta_hat)) in
     return $ Context (uncontext cll ++ HasExistentialSolved beta_hat (MonoExVar alpha_hat) : uncontext clr ++ HasExistentialUnsolved alpha_hat : uncontext cr)
 -- InstLArr
-instl (cl, alpha_hat, cr) (TArr a1 a2) = do
+instl (cl, alpha_hat, cr) (TFunc a1 a2) = do
     i <- get
     let alpha_hat1 = newexvar i
     let alpha_hat2 = newexvar (i + 1)
     put (i + 2)
     theta <- instr (HasExistentialUnsolved alpha_hat1 `ctxcons` cl, alpha_hat1, HasExistentialSolved alpha_hat (MonoFunc (MonoExVar alpha_hat1) (MonoExVar alpha_hat2)) `ctxcons` cr) a1
-    instl theta (apply theta a2)
+    let (tl, HasExistentialUnsolved alpha_hat2, tr) = fromJust $ hole theta (HasExistentialUnsolved alpha_hat2)
+    instl (tl, alpha_hat2, tr) (apply theta a2)
+-- InstLAllR
+instl (cl, alpha_hat, cr) (TForall beta b) =
+    instl (HasVar beta `ctxcons` cl, alpha_hat, cr) b >>= \delta -> let Just (_, _, cr') = hole delta (HasVar beta) in return cr'
+
 instr :: (Context, TExVarName, Context) -> Type -> State Int Context
 instr = undefined
 
